@@ -1,0 +1,12 @@
+# Serviço PostgreSQL para desenvolvimento
+services:
+  postgres:
+    image: postgres:17
+    container_name: postgres_hooktrace
+    restart: always
+    environment:
+      POSTGRES_USER: docker
+      POSTGRES_PASSWORD: docker
+      POSTGRES_DB: hooktrace_DB
+    ports:
+      - "5432:5432"
