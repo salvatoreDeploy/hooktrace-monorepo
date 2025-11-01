@@ -1,3 +1,7 @@
+import { database } from '@/db'
+import { webhooks } from '@/db/schema'
+import { desc, lt } from 'drizzle-orm'
+import { createSelectSchema } from 'drizzle-zod'
 import { FastifyPluginAsyncZod } from 'fastify-type-provider-zod'
 import { z } from 'zod'
 
@@ -10,27 +14,42 @@ export const listWebhooks: FastifyPluginAsyncZod = async (app) => {
         tags: ['Webhooks'],
         querystring: z.object({
           limit: z.coerce.number().min(1).max(100).default(20),
+          cursor: z.string().optional(),
         }),
         response: {
-          200: z.array(
-            z.object({
-              id: z.string(),
-              method: z.string(),
-            }),
-          ),
+          200: z.object({
+            webhooks: z.array(
+              createSelectSchema(webhooks).pick({
+                id: true,
+                method: true,
+                pathname: true,
+                cretatedAt: true
+              })
+            ),
+            nextCursor: z.string().nullable()
+          })
         },
       },
     },
 
     async (request, reply) => {
-      const { limit } = request.query
+      const { limit, cursor } = request.query
 
-      return [
-        {
-          id: '1234',
-          method: 'POST',
-        },
-      ]
+      const result = await database.select({
+        id: webhooks.id,
+        method: webhooks.method,
+        pathname: webhooks.pathname,
+        cretatedAt: webhooks.cretatedAt
+      }).from(webhooks).where(cursor ? lt(webhooks.id, cursor) : undefined).orderBy(desc(webhooks.id)).limit(limit + 1)
+
+      const hasMore = result.length > limit
+      const items = hasMore ? result.slice(0, limit) : result
+      const nextCursor = hasMore ? items[items.length - 1].id : null
+
+      return reply.send({
+        webhooks: items,
+        nextCursor
+      })
     },
   )
 }
