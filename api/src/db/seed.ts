@@ -3,6 +3,12 @@ import { webhooks } from './schema'
 import { faker } from '@faker-js/faker'
 
 async function seed() {
+
+  await database.delete(webhooks)
+
+  console.log("Database reiniciada com sucesso")
+
+
   const stripeEvents = [
     'payment_intent.succeeded',
     'payment_intent.payment_failed',
@@ -65,7 +71,7 @@ async function seed() {
       request: { id: faker.string.uuid(), idempotency_key: faker.string.uuid() },
       type: event,
     }
-    const body = JSON.stringify(data)
+    const body = JSON.stringify(data, null, 2)
 
     return {
       method,
