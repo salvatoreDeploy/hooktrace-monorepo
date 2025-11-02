@@ -66,6 +66,7 @@ async function seed() {
       type: event,
     }
     const body = JSON.stringify(data)
+
     return {
       method,
       ip,
@@ -78,10 +79,12 @@ async function seed() {
         'stripe-signature': faker.string.alphanumeric({ length: 32 }),
       },
       pathname,
+      createdAt: faker.date.recent({ days: 30 }),
     }
   })
 
   await database.insert(webhooks).values(webhooksData)
+
   console.log('Seed realizado com sucesso!')
   process.exit(0)
 }
