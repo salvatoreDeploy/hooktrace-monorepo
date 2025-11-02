@@ -1,4 +1,4 @@
-import { useQuery, useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { WebhooksListItem } from "./webhook-list-item";
 import { webhookListSchema } from "../http/schemas/webhooks";
 
