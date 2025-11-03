@@ -3,6 +3,7 @@ import { IconButton } from "./ui/icon-button";
 import { Trash2Icon } from "lucide-react";
 import { Checkbox } from "./ui/checkbox";
 import { formatDistanceToNow } from 'date-fns'
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 interface WebhookListItemProps {
   webhook: {
@@ -14,6 +15,22 @@ interface WebhookListItemProps {
 }
 
 export function WebhooksListItem({ webhook }: WebhookListItemProps) {
+
+  const queryClient = useQueryClient()
+
+  const { mutate: deleteWebhook } = useMutation({
+    mutationFn: async (id: string) => {
+      await fetch(`http://localhost:3333/api/webhooks/${id}`, {
+        method: 'DELETE'
+      })
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['webhooks']
+      })
+    }
+  })
+
   return (
     <div className="group rounded-lg transition-colors duration-150 hover:bg-zinc-700/30">
       <div className="flex items-center gap-3 px-4 py-2.5">
@@ -27,7 +44,10 @@ export function WebhooksListItem({ webhook }: WebhookListItemProps) {
           </div>
         </Link>
 
-        <IconButton icon={<Trash2Icon className="size-3.5 text-zinc-400" />} className="opacity-0 transition-opacity group-hover:opacity-100" />
+        <IconButton icon={<Trash2Icon className="size-3.5 text-zinc-400" />}
+          className="opacity-0 transition-opacity group-hover:opacity-100"
+          onClick={() => deleteWebhook(webhook.id)}
+        />
       </div>
     </div>
   )

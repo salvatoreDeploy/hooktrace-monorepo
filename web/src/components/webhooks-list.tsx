@@ -7,11 +7,19 @@ import { useEffect, useRef } from "react";
 export function WebhookList() {
 
   const loadMoreRef = useRef<HTMLDivElement>(null)
+  const observerRef = useRef<IntersectionObserver>(null)
 
-  const { data, hasNextPage, isFetchingNextPage } = useSuspenseInfiniteQuery({
+  const { data, hasNextPage, isFetchingNextPage, fetchNextPage } = useSuspenseInfiniteQuery({
     queryKey: ['webhooks'],
-    queryFn: async () => {
-      const response = await fetch('http://localhost:3333/api/webhooks')
+    queryFn: async ({ pageParam }) => {
+
+      const url = new URL('http://localhost:3333/api/webhooks')
+
+      if (pageParam) {
+        url.searchParams.set('cursor', pageParam)
+      }
+
+      const response = await fetch(url)
       const data = await response.json()
 
       return webhookListSchema.parse(data)
@@ -19,22 +27,30 @@ export function WebhookList() {
     getNextPageParam: (lastPage) => {
       return lastPage.nextCursor ?? undefined
     },
-    initialPageParam: undefined
+    initialPageParam: undefined as string | undefined
   })
 
   const webhooks = data.pages.flatMap(page => page.webhooks)
 
   useEffect(() => {
-    const observer = new IntersectionObserver(entries => {
+    observerRef.current = new IntersectionObserver(entries => {
       const entry = entries[0]
-    })
 
-    if (loadMoreRef.current
+      if (entry.isIntersecting && hasNextPage && !isFetchingNextPage) {
+        fetchNextPage()
+      }
+    }, { threshold: 0.1 })
 
-    ) {
-      observer.observe(loadMoreRef.current)
+    if (loadMoreRef.current) {
+      observerRef.current.observe(loadMoreRef.current)
     }
-  }, [])
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect()
+      }
+    }
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
   return (
     <div className="flex-1 overflow-y-auto">
