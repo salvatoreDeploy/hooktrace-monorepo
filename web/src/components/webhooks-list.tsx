@@ -1,13 +1,15 @@
 import { useSuspenseInfiniteQuery, } from "@tanstack/react-query";
 import { WebhooksListItem } from "./webhook-list-item";
 import { webhookListSchema } from "../http/schemas/webhooks";
-import { Loader2 } from "lucide-react";
-import { useEffect, useRef } from "react";
+import { Loader2, Wand2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 
 export function WebhookList() {
 
   const loadMoreRef = useRef<HTMLDivElement>(null)
   const observerRef = useRef<IntersectionObserver>(null)
+
+  const [checkedWebhookIds, setCheckedWebhookIds] = useState<string[]>([])
 
   const { data, hasNextPage, isFetchingNextPage, fetchNextPage } = useSuspenseInfiniteQuery({
     queryKey: ['webhooks'],
@@ -52,11 +54,40 @@ export function WebhookList() {
     }
   }, [hasNextPage, isFetchingNextPage, fetchNextPage])
 
+  function handleCheckedWebhook(checkedWebhookId: string) {
+    if (checkedWebhookIds.includes(checkedWebhookId)) {
+      setCheckedWebhookIds(state => {
+        return state.filter(webhookId => webhookId !== checkedWebhookId)
+      })
+    } else {
+      setCheckedWebhookIds(state => [...state, checkedWebhookId])
+    }
+  }
+
+  const hasAnyWebhookChecked = checkedWebhookIds.length > 0
+
+  function handleGenerateHandle() {
+    console.log(checkedWebhookIds)
+  }
+
+
   return (
-    <div className="flex-1 overflow-y-auto">
+    <div className="flex-1 overflow-y-auto relative">
       <div className="space-y-1 p-2">
+        <button disabled={!hasAnyWebhookChecked} className="bg-indigo-400 mb-3 text-white w-full rounded-lg flex items-center justify-center gap-3 py-2 font-medium text-sm disabled:opacity-50"
+          onClick={handleGenerateHandle}
+        >
+          <Wand2 className="size-4" />
+          Gerar handler
+        </button>
         {webhooks.map(webhook => {
-          return <WebhooksListItem key={webhook.id} webhook={webhook} />
+          return (
+            <WebhooksListItem
+              key={webhook.id}
+              webhook={webhook}
+              onWebhookChecked={handleCheckedWebhook}
+              isWebhookChecked={checkedWebhookIds.includes(webhook.id)} />
+          )
         })}
       </div>
 
@@ -69,6 +100,7 @@ export function WebhookList() {
           )}
         </div>
       )}
+
     </div>
   )
 }
