@@ -66,8 +66,18 @@ export function WebhookList() {
 
   const hasAnyWebhookChecked = checkedWebhookIds.length > 0
 
-  function handleGenerateHandle() {
-    console.log(checkedWebhookIds)
+  async function handleGenerateHandle() {
+    const response = await fetch('http://localhost:3333/api/generate-handler', {
+      method: 'POST',
+      body: JSON.stringify({ webhooksIds: checkedWebhookIds }),
+      headers: {
+        'Content-type': 'application/json'
+      }
+    })
+
+    const data = await response.json()
+
+    console.log(data)
   }
 
 
@@ -75,7 +85,7 @@ export function WebhookList() {
     <div className="flex-1 overflow-y-auto relative">
       <div className="space-y-1 p-2">
         <button disabled={!hasAnyWebhookChecked} className="bg-indigo-400 mb-3 text-white w-full rounded-lg flex items-center justify-center gap-3 py-2 font-medium text-sm disabled:opacity-50"
-          onClick={handleGenerateHandle}
+          onClick={() => handleGenerateHandle()}
         >
           <Wand2 className="size-4" />
           Gerar handler
