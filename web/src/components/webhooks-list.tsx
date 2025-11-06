@@ -1,6 +1,6 @@
 import { useSuspenseInfiniteQuery, } from "@tanstack/react-query";
 import { WebhooksListItem } from "./webhook-list-item";
-import { webhookListSchema } from "../http/schemas/webhooks";
+import { webhookListSchema, webhookHandler } from "../http/schemas/webhooks";
 import { Loader2, Wand2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
@@ -10,6 +10,7 @@ export function WebhookList() {
   const observerRef = useRef<IntersectionObserver>(null)
 
   const [checkedWebhookIds, setCheckedWebhookIds] = useState<string[]>([])
+  const [generateHandlerCode, setGenerateHandlerCode] = useState<string | null>(null)
 
   const { data, hasNextPage, isFetchingNextPage, fetchNextPage } = useSuspenseInfiniteQuery({
     queryKey: ['webhooks'],
@@ -75,9 +76,11 @@ export function WebhookList() {
       }
     })
 
-    const data = await response.json()
+    type GenerateResponse = { code: string }
 
-    console.log(data)
+    const data: GenerateResponse = await response.json()
+
+    setGenerateHandlerCode(data.code)
   }
 
 
