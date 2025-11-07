@@ -1,8 +1,10 @@
 import { useSuspenseInfiniteQuery, } from "@tanstack/react-query";
 import { WebhooksListItem } from "./webhook-list-item";
-import { webhookListSchema, webhookHandler } from "../http/schemas/webhooks";
+import { webhookListSchema } from "../http/schemas/webhooks";
 import { Loader2, Wand2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import * as Dialog from '@radix-ui/react-dialog'
+import { CodeBlock } from "./ui/code-block";
 
 export function WebhookList() {
 
@@ -11,6 +13,7 @@ export function WebhookList() {
 
   const [checkedWebhookIds, setCheckedWebhookIds] = useState<string[]>([])
   const [generateHandlerCode, setGenerateHandlerCode] = useState<string | null>(null)
+  const [isGeneratingHandler, setIsGeneratingHandler] = useState(false)
 
   const { data, hasNextPage, isFetchingNextPage, fetchNextPage } = useSuspenseInfiniteQuery({
     queryKey: ['webhooks'],
@@ -68,52 +71,84 @@ export function WebhookList() {
   const hasAnyWebhookChecked = checkedWebhookIds.length > 0
 
   async function handleGenerateHandle() {
-    const response = await fetch('http://localhost:3333/api/generate-handler', {
-      method: 'POST',
-      body: JSON.stringify({ webhooksIds: checkedWebhookIds }),
-      headers: {
-        'Content-type': 'application/json'
-      }
-    })
+    setIsGeneratingHandler(true)
+    try {
+      const response = await fetch('http://localhost:3333/api/generate-handler', {
+        method: 'POST',
+        body: JSON.stringify({ webhooksIds: checkedWebhookIds }),
+        headers: {
+          'Content-type': 'application/json'
+        }
+      })
 
-    type GenerateResponse = { code: string }
+      type GenerateResponse = { code: string }
 
-    const data: GenerateResponse = await response.json()
+      const data: GenerateResponse = await response.json()
 
-    setGenerateHandlerCode(data.code)
+      setGenerateHandlerCode(data.code)
+    } finally {
+      setIsGeneratingHandler(false)
+    }
   }
 
 
   return (
-    <div className="flex-1 overflow-y-auto relative">
-      <div className="space-y-1 p-2">
-        <button disabled={!hasAnyWebhookChecked} className="bg-indigo-400 mb-3 text-white w-full rounded-lg flex items-center justify-center gap-3 py-2 font-medium text-sm disabled:opacity-50"
-          onClick={() => handleGenerateHandle()}
-        >
-          <Wand2 className="size-4" />
-          Gerar handler
-        </button>
-        {webhooks.map(webhook => {
-          return (
-            <WebhooksListItem
-              key={webhook.id}
-              webhook={webhook}
-              onWebhookChecked={handleCheckedWebhook}
-              isWebhookChecked={checkedWebhookIds.includes(webhook.id)} />
-          )
-        })}
+    <>
+      <div className="flex-1 overflow-y-auto">
+        <div className="space-y-1 p-2">
+          <button
+            disabled={!hasAnyWebhookChecked || isGeneratingHandler}
+            className="bg-indigo-400 mb-3 text-white w-full rounded-lg flex items-center justify-center gap-3 py-2 font-medium text-sm disabled:opacity-50"
+            onClick={handleGenerateHandle}
+          >
+            {isGeneratingHandler ? (
+              <span className="relative flex h-4 w-4">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-white opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-4 w-4 bg-white"></span>
+              </span>
+            ) : (
+              <Wand2 className="size-4" />
+            )}
+            {isGeneratingHandler ? 'Gerando...' : 'Gerar handler'}
+          </button>
+          {webhooks.map(webhook => {
+            return (
+              <WebhooksListItem
+                key={webhook.id}
+                webhook={webhook}
+                onWebhookChecked={handleCheckedWebhook}
+                isWebhookChecked={checkedWebhookIds.includes(webhook.id)} />
+            )
+          })}
+        </div>
+
+        {hasNextPage && (
+          <div className="p-2" ref={loadMoreRef}>
+            {isFetchingNextPage && (
+              <div className="flex items-center justify-center py-2">
+                <Loader2 className="size-5 animate-spin text-zinc-700" />
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
 
-      {hasNextPage && (
-        <div className="p-2" ref={loadMoreRef}>
-          {isFetchingNextPage && (
-            <div className="flex items-center justify-center py-2">
-              <Loader2 className="size-5 animate-spin text-zinc-700" />
-            </div>
-          )}
-        </div>
-      )}
+      {
+        !!generateHandlerCode && (
+          <Dialog.Root defaultOpen>
+            <Dialog.Overlay className="bg-black/60 inset-0 fixed z-20" />
 
-    </div>
+            <Dialog.Content className="flex items-center justify-center fixed left-1/2 top-1/2 max-h-[85vh] w-[98vw] -translate-x-1/2 -translate-y-1/2 max-w-[960px] z-40">
+              <div className="bg-zinc-900 w-[960px] p-4 rounded-lg border border-zinc-800 max-h-[720px] overflow-y-auto">
+                <CodeBlock language="typescript" code={generateHandlerCode} />
+              </div>
+            </Dialog.Content>
+          </Dialog.Root>
+        )
+
+      }
+    </>
+
   )
 }
